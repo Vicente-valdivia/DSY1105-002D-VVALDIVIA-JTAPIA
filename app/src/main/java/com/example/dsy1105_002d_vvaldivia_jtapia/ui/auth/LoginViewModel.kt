@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 1. Data class para el formulario (alineado a la Guía 11)
+// 1. Data class para el formulario
 data class LoginFormState(
     val email: String = "",
     val clave: String = "",
@@ -21,11 +21,9 @@ data class LoginFormState(
 
 class LoginViewModel : ViewModel() {
 
-    // Estado del formulario encapsulado
     private val _formState = MutableStateFlow(LoginFormState())
     val formState: StateFlow<LoginFormState> = _formState.asStateFlow()
 
-    // Estado de la pantalla (Loading, Success, Error)
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 

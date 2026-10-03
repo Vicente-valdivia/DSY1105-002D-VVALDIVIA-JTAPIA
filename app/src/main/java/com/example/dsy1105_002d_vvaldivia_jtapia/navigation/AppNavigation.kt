@@ -9,7 +9,6 @@ import com.example.dsy1105_002d_vvaldivia_jtapia.ui.home.HomeScreen
 
 @Composable
 fun AppNavigation() {
-    // El NavController es el motor que gestiona el viaje entre pantallas
     val navController = rememberNavController()
 
     NavHost(

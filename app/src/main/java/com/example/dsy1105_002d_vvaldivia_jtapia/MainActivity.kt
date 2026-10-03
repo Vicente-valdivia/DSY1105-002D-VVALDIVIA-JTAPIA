@@ -13,7 +13,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface {
-                    // Aquí insertamos el flujo de navegación en lugar de la pantalla suelta[cite: 14]
                     AppNavigation()
                 }
             }
