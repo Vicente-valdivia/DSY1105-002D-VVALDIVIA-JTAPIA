@@ -49,7 +49,7 @@ class LoginViewModel : ViewModel() {
             _formState.update { it.copy(errorEmail = "El correo es obligatorio") }
             hasError = true
         } else {
-            _formState.update { it.copy(errorEmail = null) } // Limpiamos el error si se corrigió
+            _formState.update { it.copy(errorEmail = null) }
         }
 
         // 2. Validación de la Contraseña
@@ -60,7 +60,7 @@ class LoginViewModel : ViewModel() {
             _formState.update { it.copy(errorClave = "Contraseña incorrecta") }
             hasError = true
         } else {
-            _formState.update { it.copy(errorClave = null) } // Limpiamos el error
+            _formState.update { it.copy(errorClave = null) }
         }
 
         // Si hay errores, detenemos el flujo de login
@@ -99,6 +99,6 @@ class LoginViewModel : ViewModel() {
 
     fun resetState() {
         _uiState.value = LoginUiState.Idle
-        _formState.update { LoginFormState() } // Limpia los campos
+        _formState.update { LoginFormState() }
     }
 }
