@@ -18,8 +18,7 @@ fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
     onLoginSuccess: (User) -> Unit
 ) {
-    val email by viewModel.emailState.collectAsState()
-    val password by viewModel.passwordState.collectAsState()
+    val formState by viewModel.formState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState) {
@@ -48,18 +47,22 @@ fun LoginScreen(
             )
 
             Text(
-                text = "Monitoreo móvil de eventos y alertas",
+                text = "Monitoreo móvil de eventos",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            // Campo de Email
+            // Campo de Email mejorado
             OutlinedTextField(
-                value = email,
+                value = formState.email,
                 onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("Correo o Usuario") },
                 singleLine = true,
+                isError = formState.errorEmail != null,
+                supportingText = {
+                    formState.errorEmail?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
+                },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Next
@@ -67,15 +70,19 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Campo de Contraseña
+            // Campo de Contraseña mejorado
             OutlinedTextField(
-                value = password,
+                value = formState.clave,
                 onValueChange = { viewModel.onPasswordChange(it) },
                 label = { Text("Contraseña") },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
+                isError = formState.errorClave != null,
+                supportingText = {
+                    formState.errorClave?.let { Text(text = it, color = MaterialTheme.colorScheme.error) }
+                },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
@@ -85,7 +92,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botón de Inicio de Sesión
             Button(
                 onClick = { viewModel.login() },
                 enabled = uiState !is LoginUiState.Loading,
@@ -101,17 +107,6 @@ fun LoginScreen(
                 } else {
                     Text("Iniciar Sesión")
                 }
-            }
-
-            // Mensaje de Error
-            if (uiState is LoginUiState.Error) {
-                val errorMessage = (uiState as LoginUiState.Error).message
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
             }
         }
     }

@@ -8,61 +8,63 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+// 1. Data class para el formulario (alineado a la Guía 11)
+data class LoginFormState(
+    val email: String = "",
+    val clave: String = "",
+    val errorEmail: String? = null,
+    val errorClave: String? = null
+)
 
 class LoginViewModel : ViewModel() {
 
-    var emailState = MutableStateFlow("")
-        private set
+    // Estado del formulario encapsulado
+    private val _formState = MutableStateFlow(LoginFormState())
+    val formState: StateFlow<LoginFormState> = _formState.asStateFlow()
 
-    var passwordState = MutableStateFlow("")
-        private set
-
+    // Estado de la pantalla (Loading, Success, Error)
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     fun onEmailChange(newEmail: String) {
-        emailState.value = newEmail
+        _formState.update { it.copy(email = newEmail, errorEmail = null) }
     }
 
     fun onPasswordChange(newPassword: String) {
-        passwordState.value = newPassword
+        _formState.update { it.copy(clave = newPassword, errorClave = null) }
     }
 
     fun login() {
-        val email = emailState.value.trim()
-        val password = passwordState.value.trim()
+        val currentForm = _formState.value
+        val email = currentForm.email.trim()
+        val password = currentForm.clave.trim()
 
-        if (email.isBlank() || password.isBlank()) {
-            _uiState.value = LoginUiState.Error("Por favor, ingrese email y contraseña.")
-            return
+        var hasError = false
+
+        // Validaciones individuales
+        if (email.isBlank()) {
+            _formState.update { it.copy(errorEmail = "El correo es obligatorio") }
+            hasError = true
         }
+        if (password.isBlank()) {
+            _formState.update { it.copy(errorClave = "La contraseña es obligatoria") }
+            hasError = true
+        }
+
+        if (hasError) return
 
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
 
-            // Simulación de respuesta de API REST
-            delay(1500)
+            delay(1500) // Simulación de API
 
             val user = when {
-                email.contains("admin", ignoreCase = true) -> User(
-                    id = "1",
-                    name = "Admin General",
-                    email = email,
-                    role = UserRole.ADMINISTRADOR
-                )
-                email.contains("super", ignoreCase = true) -> User(
-                    id = "2",
-                    name = "Supervisor de Turno",
-                    email = email,
-                    role = UserRole.SUPERVISOR
-                )
-                else -> User(
-                    id = "3",
-                    name = "Operador de Cámaras",
-                    email = email,
-                    role = UserRole.OPERADOR
-                )
+                email.contains("admin", ignoreCase = true) -> User("1", "Admin General", email, UserRole.ADMINISTRADOR)
+                email.contains("super", ignoreCase = true) -> User("2", "Supervisor de Turno", email, UserRole.SUPERVISOR)
+                else -> User("3", "Operador de Cámaras", email, UserRole.OPERADOR)
             }
 
             _uiState.value = LoginUiState.Success(user)
@@ -71,5 +73,6 @@ class LoginViewModel : ViewModel() {
 
     fun resetState() {
         _uiState.value = LoginUiState.Idle
+        _formState.update { LoginFormState() } // Limpia los campos
     }
 }
