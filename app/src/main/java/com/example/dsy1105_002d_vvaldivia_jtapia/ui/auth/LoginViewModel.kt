@@ -44,27 +44,53 @@ class LoginViewModel : ViewModel() {
 
         var hasError = false
 
-        // Validaciones individuales
+        // 1. Validación del Email
         if (email.isBlank()) {
             _formState.update { it.copy(errorEmail = "El correo es obligatorio") }
             hasError = true
+        } else {
+            _formState.update { it.copy(errorEmail = null) } // Limpiamos el error si se corrigió
         }
+
+        // 2. Validación de la Contraseña
         if (password.isBlank()) {
             _formState.update { it.copy(errorClave = "La contraseña es obligatoria") }
             hasError = true
+        } else if (password != "1234") {
+            _formState.update { it.copy(errorClave = "Contraseña incorrecta") }
+            hasError = true
+        } else {
+            _formState.update { it.copy(errorClave = null) } // Limpiamos el error
         }
 
+        // Si hay errores, detenemos el flujo de login
         if (hasError) return
 
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
 
-            delay(1500) // Simulación de API
+            // Simulación de respuesta de API REST
+            delay(1500)
 
             val user = when {
-                email.contains("admin", ignoreCase = true) -> User("1", "Admin General", email, UserRole.ADMINISTRADOR)
-                email.contains("super", ignoreCase = true) -> User("2", "Supervisor de Turno", email, UserRole.SUPERVISOR)
-                else -> User("3", "Operador de Cámaras", email, UserRole.OPERADOR)
+                email.contains("admin", ignoreCase = true) -> User(
+                    id = "1",
+                    name = "Admin General",
+                    email = email,
+                    role = UserRole.ADMINISTRADOR
+                )
+                email.contains("super", ignoreCase = true) -> User(
+                    id = "2",
+                    name = "Supervisor de Turno",
+                    email = email,
+                    role = UserRole.SUPERVISOR
+                )
+                else -> User(
+                    id = "3",
+                    name = "Operador de Cámaras",
+                    email = email,
+                    role = UserRole.OPERADOR
+                )
             }
 
             _uiState.value = LoginUiState.Success(user)
