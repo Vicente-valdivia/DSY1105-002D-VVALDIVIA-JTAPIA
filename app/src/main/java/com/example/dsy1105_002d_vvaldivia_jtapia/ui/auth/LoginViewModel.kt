@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 1. Data class para el formulario.
+// 1. Data class para el formulario..
 data class LoginFormState(
     val email: String = "",
     val clave: String = "",
