@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 1. Data class para el formulario..
+// Estado de los campos y errores del formulario
 data class LoginFormState(
     val email: String = "",
     val clave: String = "",
@@ -21,11 +21,21 @@ data class LoginFormState(
 
 class LoginViewModel : ViewModel() {
 
-    private val _formState = MutableStateFlow(LoginFormState())
-    val formState: StateFlow<LoginFormState> = _formState.asStateFlow()
+    // Lista de correos autorizados en el sistema
+    private val validEmails = setOf(
+        "admin@guardian.test",
+        "supervisor@guardian.test",
+        "operador@guardian.test"
+    )
 
-    private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
-    val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
+    // Regex para validar formato de correo electrónico
+    private val emailRegex = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
+
+    private val _formState = MutableStateFlow(LoginFormState())
+    val formState: StateFlow = _formState.asStateFlow()
+
+    private val _uiState = MutableStateFlow(LoginUiState.Idle)
+    val uiState: StateFlow = _uiState.asStateFlow()
 
     fun onEmailChange(newEmail: String) {
         _formState.update { it.copy(email = newEmail, errorEmail = null) }
@@ -37,58 +47,65 @@ class LoginViewModel : ViewModel() {
 
     fun login() {
         val currentForm = _formState.value
-        val email = currentForm.email.trim()
+        val email = currentForm.email.trim().lowercase()
         val password = currentForm.clave.trim()
 
-        var hasError = false
-
         // 1. Validación del Email
-        if (email.isBlank()) {
-            _formState.update { it.copy(errorEmail = "El correo es obligatorio") }
-            hasError = true
-        } else {
-            _formState.update { it.copy(errorEmail = null) }
+        val emailError = when {
+            email.isBlank() -> "El correo es obligatorio"
+            !email.matches(emailRegex) -> "Formato de correo inválido (ej. usuario@guardian.test)"
+            email not in validEmails -> "El correo no corresponde a un usuario registrado"
+            else -> null
         }
 
         // 2. Validación de la Contraseña
-        if (password.isBlank()) {
-            _formState.update { it.copy(errorClave = "La contraseña es obligatoria") }
-            hasError = true
-        } else if (password != "1234") {
-            _formState.update { it.copy(errorClave = "Contraseña incorrecta") }
-            hasError = true
-        } else {
-            _formState.update { it.copy(errorClave = null) }
+        val passwordError = when {
+            password.isBlank() -> "La contraseña es obligatoria"
+            password != "123456" -> "Contraseña incorrecta"
+            else -> null
         }
 
-        // Si hay errores, detenemos el flujo de login
-        if (hasError) return
+        // Actualizamos los mensajes de error en el estado del formulario
+        _formState.update {
+            it.copy(
+                errorEmail = emailError,
+                errorClave = passwordError
+            )
+        }
 
+        // Si existe algún error de validación, detenemos el proceso
+        if (emailError != null || passwordError != null) return
+
+        // 3. Proceso de Inicio de Sesión
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
 
-            // Simulación de respuesta de API REST
+            // Simulación de respuesta de red / API
             delay(1500)
 
-            val user = when {
-                email.contains("admin", ignoreCase = true) -> User(
+            val user = when (email) {
+                "admin@guardian.test" -> User(
                     id = "1",
                     name = "Admin General",
                     email = email,
                     role = UserRole.ADMINISTRADOR
                 )
-                email.contains("super", ignoreCase = true) -> User(
+                "supervisor@guardian.test" -> User(
                     id = "2",
                     name = "Supervisor de Turno",
                     email = email,
                     role = UserRole.SUPERVISOR
                 )
-                else -> User(
+                "operador@guardian.test" -> User(
                     id = "3",
                     name = "Operador de Cámaras",
                     email = email,
                     role = UserRole.OPERADOR
                 )
+                else -> {
+                    _uiState.value = LoginUiState.Error("Usuario no encontrado")
+                    return@launch
+                }
             }
 
             _uiState.value = LoginUiState.Success(user)
