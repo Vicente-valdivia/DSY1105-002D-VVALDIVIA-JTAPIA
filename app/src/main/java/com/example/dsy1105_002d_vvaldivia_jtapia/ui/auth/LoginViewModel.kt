@@ -70,7 +70,6 @@ class LoginViewModel : ViewModel() {
         // Borramos el texto digitado, pero conservamos los mensajes de error
         _formState.update {
             it.copy(
-                email = "",
                 clave = "",
                 errorEmail = errorMsgEmail,
                 errorClave = errorMsgClave
