@@ -7,38 +7,56 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth.LoginScreen
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth.RegisterScreen
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.home.HomeScreen
 
 @Composable
 fun AppNavigation() {
+    // NavController es el controlador central que gestiona el backstack y la transición entre pantallas
     val navController = rememberNavController()
-    // Obtenemos el contexto actual para poder lanzar el Toast
+    // LocalContext permite acceder al contexto de Android para lanzar notificaciones como Toast
     val context = LocalContext.current
 
     NavHost(
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        // Ruta 1: Pantalla de Login
+        // 1. Ruta de Inicio de Sesión
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = { user ->
-                    // 1. Mostramos el mensaje de éxito nuevamente
+                    // Feedback visual al iniciar sesión correctamente
                     Toast.makeText(
-                        context, 
-                        "Bienvenido ${user.name} (${user.role})", 
+                        context,
+                        "Bienvenido ${user.name} (${user.role})",
                         Toast.LENGTH_LONG
                     ).show()
 
-                    // 2. Navegamos al Home y destruimos el login del historial
+                    // Navegación segura hacia el Home
                     navController.navigate(Screen.Home.route) {
+                        // popUpTo destruye la pantalla de Login del historial (Backstack).
+                        // Esto evita que el usuario vuelva al login presionando el botón "Atrás" del celular.
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
+                },
+                onNavigateToRegister = {
+                    // Navega a la pantalla de registro de forma estándar
+                    navController.navigate(Screen.Register.route)
                 }
             )
         }
 
-        // Ruta 2: Pantalla Principal (Home)
+        // 2. Ruta de Registro
+        composable(route = Screen.Register.route) {
+            RegisterScreen(
+                onNavigateBack = {
+                    // popBackStack retira la pantalla actual (Registro) y vuelve a la anterior (Login)
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // 3. Ruta del Panel Principal (Modo Guardián)
         composable(route = Screen.Home.route) {
             HomeScreen()
         }

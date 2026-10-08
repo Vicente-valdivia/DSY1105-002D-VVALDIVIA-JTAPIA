@@ -3,7 +3,7 @@ package com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.User
-import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserRole
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository // Importamos tu repositorio object
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 1. Data class para el formulario..
+// Data class para el formulario
 data class LoginFormState(
     val email: String = "",
     val clave: String = "",
@@ -40,56 +40,40 @@ class LoginViewModel : ViewModel() {
         val emailInput = currentForm.email.trim().lowercase()
         val password = currentForm.clave.trim()
 
-        var hasError = false
-        var errorMsgEmail: String? = null
-        var errorMsgClave: String? = null
-
-        val correosValidos = listOf(
-            "admin@modoguardian.cl",
-            "super@modoguardian.cl",
-            "operador@modoguardian.cl"
-        )
-
-        // 1. Validación de campos vacíos
+        // Validación de campos vacíos
         if (emailInput.isBlank() || password.isBlank()) {
-            if (emailInput.isBlank()) errorMsgEmail = "El correo es obligatorio"
-            if (password.isBlank()) errorMsgClave = "La contraseña es obligatoria"
-            hasError = true
+            _formState.update {
+                it.copy(
+                    email = "", clave = "",
+                    errorEmail = if (emailInput.isBlank()) "El correo es obligatorio" else "Credenciales incorrectas",
+                    errorClave = if (password.isBlank()) "La contraseña es obligatoria" else "Credenciales incorrectas"
+                )
+            }
+            return
         }
-        // 2. Validación estricta y segura (Anti-enumeración)
-        // Si no están vacíos, pero cualquiera de los dos es incorrecto:
-        else if (emailInput !in correosValidos || password != "1234") {
-            // Asignamos el mismo mensaje de error a AMBOS campos para mantener
-            // la consistencia visual que pediste y mejorar la seguridad.
-            errorMsgEmail = "Credenciales incorrectas"
-            errorMsgClave = "Credenciales incorrectas"
-            hasError = true
-        }
-
-        // 3. Limpieza de campos reactiva
-        // Borramos el texto digitado, pero conservamos los mensajes de error
-        _formState.update {
-            it.copy(
-                clave = "",
-                errorEmail = errorMsgEmail,
-                errorClave = errorMsgClave
-            )
-        }
-
-        if (hasError) return
 
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
+            delay(1000) // Simulación de red
 
-            delay(1500)
+            // CORREGIDO: Al ser un 'object', lo llamamos directamente usando la mayúscula 'UserRepository'
+            val user = UserRepository.authenticate(emailInput, password)
 
-            val user = when (emailInput) {
-                "admin@modoguardian.cl" -> User("1", "Admin General", emailInput, UserRole.ADMINISTRADOR)
-                "super@modoguardian.cl" -> User("2", "Supervisor de Turno", emailInput, UserRole.SUPERVISOR)
-                else -> User("3", "Operador de Cámaras", emailInput, UserRole.OPERADOR)
+            if (user != null) {
+                // Login Exitoso
+                _formState.update { LoginFormState() } // Limpiamos formulario
+                _uiState.value = LoginUiState.Success(user)
+            } else {
+                // Login Fallido (No existe o clave incorrecta)
+                _formState.update {
+                    it.copy(
+                        email = "", clave = "",
+                        errorEmail = "Credenciales incorrectas",
+                        errorClave = "Credenciales incorrectas"
+                    )
+                }
+                _uiState.value = LoginUiState.Idle
             }
-
-            _uiState.value = LoginUiState.Success(user)
         }
     }
 

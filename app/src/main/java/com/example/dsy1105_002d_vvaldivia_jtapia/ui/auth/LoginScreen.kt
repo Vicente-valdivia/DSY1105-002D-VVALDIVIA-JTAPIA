@@ -16,7 +16,8 @@ import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.User
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = viewModel(),
-    onLoginSuccess: (User) -> Unit
+    onLoginSuccess: (User) -> Unit,
+    onNavigateToRegister: () -> Unit // 1. AGREGADO: Parámetro para solucionar el error de compilación
 ) {
     val formState by viewModel.formState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -92,6 +93,7 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Botón de Iniciar Sesión
             Button(
                 onClick = { viewModel.login() },
                 enabled = uiState !is LoginUiState.Loading,
@@ -107,6 +109,13 @@ fun LoginScreen(
                 } else {
                     Text("Iniciar Sesión")
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp)) // 2. CORREGIDO: Espaciado ordenado afuera del botón
+
+            // Botón para ir al Registro (Ubicado correctamente fuera del botón principal)
+            TextButton(onClick = onNavigateToRegister) {
+                Text("¿No tienes cuenta? Regístrate aquí")
             }
         }
     }
