@@ -9,9 +9,9 @@ private data class UserRecord(val user: User, val clave: String)
 object UserRepository {
     // Lista mutable privada (Nuestra BD simulada)
     private val records = mutableListOf(
-        UserRecord(User("1", "Admin General", "admin@modoguardian.cl", UserRole.ADMINISTRADOR), "1234"),
-        UserRecord(User("2", "Supervisor de Turno", "super@modoguardian.cl", UserRole.SUPERVISOR), "1234"),
-        UserRecord(User("3", "Operador de Cámaras", "operador@modoguardian.cl", UserRole.OPERADOR), "1234")
+        UserRecord(User("1", "Admin General", "admin@modoguardian.cl", UserRole.ADMINISTRADOR), "123456"),
+        UserRecord(User("2", "Supervisor de Turno", "super@modoguardian.cl", UserRole.SUPERVISOR), "123456"),
+        UserRecord(User("3", "Operador de Cámaras", "operador@modoguardian.cl", UserRole.OPERADOR), "123456")
     )
 
     // Verifica si el correo ya está registrado
