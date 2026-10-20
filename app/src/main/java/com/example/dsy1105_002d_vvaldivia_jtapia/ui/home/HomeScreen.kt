@@ -5,32 +5,54 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onLogout: () -> Unit // <-- MODIFICADO: Recibe el callback de cierre de sesión
+) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Modo Guardián") },
+                title = { Text("Modo Guardián - Panel Principal") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         }
-    ) { innerPadding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(paddingValues)
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "¡Bienvenido al panel de monitoreo!",
-                style = MaterialTheme.typography.titleLarge
+                text = "Bienvenido al Panel Principal",
+                style = MaterialTheme.typography.headlineSmall
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // -- NUEVO: Botón para Cerrar Sesión --
+            Button(
+                onClick = onLogout,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+            ) {
+                Text(
+                    text = "Cerrar Sesión",
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
     }
 }
