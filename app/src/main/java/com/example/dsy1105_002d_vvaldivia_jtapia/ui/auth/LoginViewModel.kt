@@ -44,8 +44,8 @@ class LoginViewModel : ViewModel() {
         if (emailInput.isBlank() || password.isBlank()) {
             _formState.update {
                 it.copy(
-                    email = "", clave = "",
-                    errorEmail = if (emailInput.isBlank()) "El correo es obligatorio" else "Credenciales incorrectas",
+                    clave = "",
+                    errorEmail = if (emailInput.isBlank()) "El correo es obligatorio" else null,
                     errorClave = if (password.isBlank()) "La contraseña es obligatoria" else "Credenciales incorrectas"
                 )
             }
@@ -67,8 +67,8 @@ class LoginViewModel : ViewModel() {
                 // Login Fallido (No existe o clave incorrecta)
                 _formState.update {
                     it.copy(
-                        email = "", clave = "",
-                        errorEmail = "Credenciales incorrectas",
+                        clave = "",
+
                         errorClave = "Credenciales incorrectas"
                     )
                 }
