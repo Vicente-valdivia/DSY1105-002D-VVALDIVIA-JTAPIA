@@ -61,6 +61,24 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.10")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.2")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.2")
+
+    // Kotest para pruebas de lógica y asincronía
+    testImplementation("io.kotest:kotest-runner-junit5:5.8.6")
+    testImplementation("io.kotest:kotest-assertions-core:5.8.8")
+
+// JUnit 5
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.6")
+
+// MockK para simular objetos y dependencias
+    testImplementation("io.mockk:mockk:1.13.10")
+
+// Coroutines Test para manejar llamadas asincrónicas
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
+// Compose UI Test (Pruebas instrumentadas)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.6.2")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.2")
+
 }
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
