@@ -1,5 +1,11 @@
 package com.example.dsy1105_002d_vvaldivia_jtapia.ui.navigation
 
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens.HomeScreen
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens.CamerasScreen
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens.EventsScreen
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens.AlertsScreen
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens.ProfileScreen
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -79,11 +85,11 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { PlaceholderScreen("Vista de Inicio / General") }
-            composable(Screen.Cameras.route) { PlaceholderScreen("Vista de Cámaras Asignadas") }
-            composable(Screen.Events.route) { PlaceholderScreen("Historial de Registros y Eventos") }
-            composable(Screen.Alerts.route) { PlaceholderScreen("Panel de Alertas Críticas") }
-            composable(Screen.Profile.route) { PlaceholderScreen("Perfil y Configuración de Turno") }
+            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Cameras.route) { CamerasScreen() }
+            composable(Screen.Events.route) { EventsScreen() }
+            composable(Screen.Alerts.route) { AlertsScreen() }
+            composable(Screen.Profile.route) { ProfileScreen() }
         }
     }
 }
