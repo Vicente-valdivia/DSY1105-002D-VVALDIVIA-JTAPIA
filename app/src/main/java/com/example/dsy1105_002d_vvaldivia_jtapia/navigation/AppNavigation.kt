@@ -19,7 +19,7 @@ fun AppNavigation() {
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-        // 1. Ruta de Inicio de Sesión
+        // 1. Ruta de Inicio de Sesión que
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = { user ->
