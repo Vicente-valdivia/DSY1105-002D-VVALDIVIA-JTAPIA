@@ -20,7 +20,9 @@ data class RegisterFormState(
     val errorApellido: String? = null,
     val errorEmail: String? = null,
     val errorClave: String? = null,
-    val errorConfirmar: String? = null
+    val errorConfirmar: String? = null,
+    val registroExitoso: Boolean = false,
+    val isLoading: Boolean = false
 )
 
 class RegisterViewModel : ViewModel() {
@@ -28,57 +30,70 @@ class RegisterViewModel : ViewModel() {
     private val _formState = MutableStateFlow(RegisterFormState())
     val formState: StateFlow<RegisterFormState> = _formState.asStateFlow()
 
-    // Usamos un booleano reactivo para saber cuándo navegar hacia atrás
-    private val _registroExitoso = MutableStateFlow(false)
-    val registroExitoso: StateFlow<Boolean> = _registroExitoso.asStateFlow()
-
-    fun updateField(field: String, value: String) {
-        _formState.update {
-            when (field) {
-                "nombre" -> it.copy(nombre = value, errorNombre = null)
-                "apellido" -> it.copy(apellido = value, errorApellido = null)
-                "email" -> it.copy(email = value, errorEmail = null)
-                "clave" -> it.copy(clave = value, errorClave = null)
-                "confirmar" -> it.copy(confirmarClave = value, errorConfirmar = null)
-                else -> it
-            }
-        }
-    }
+    fun onNombreChanged(v: String) { _formState.update { it.copy(nombre = v, errorNombre = null) } }
+    fun onApellidoChanged(v: String) { _formState.update { it.copy(apellido = v, errorApellido = null) } }
+    fun onEmailChanged(v: String) { _formState.update { it.copy(email = v, errorEmail = null) } }
+    fun onClaveChanged(v: String) { _formState.update { it.copy(clave = v, errorClave = null) } }
+    fun onConfirmarClaveChanged(v: String) { _formState.update { it.copy(confirmarClave = v, errorConfirmar = null) } }
 
     fun registrar() {
-        val form = _formState.value
+        val state = _formState.value
         var hasError = false
-        var errores = RegisterFormState(nombre = form.nombre, apellido = form.apellido, email = form.email, clave = form.clave, confirmarClave = form.confirmarClave)
 
-        if (form.nombre.isBlank()) { errores = errores.copy(errorNombre = "Requerido"); hasError = true }
-        if (form.apellido.isBlank()) { errores = errores.copy(errorApellido = "Requerido"); hasError = true }
+        val nombreTrim = state.nombre.trim()
+        val apellidoTrim = state.apellido.trim()
+        val emailTrim = state.email.trim()
+        val claveTrim = state.clave.trim()
+        val confirmarTrim = state.confirmarClave.trim()
 
-        if (form.email.isBlank() || !form.email.contains("@")) {
-            errores = errores.copy(errorEmail = "Correo inválido"); hasError = true
-        } else if (UserRepository.emailExists(form.email.trim().lowercase())) {
-            errores = errores.copy(errorEmail = "El correo ya está registrado"); hasError = true
+        // 1. Validar Nombre
+        if (nombreTrim.length < 2) {
+            _formState.update { it.copy(errorNombre = "El nombre debe tener al menos 2 caracteres") }
+            hasError = true
         }
 
-        if (form.clave.length < 6) {
-            errores = errores.copy(errorClave = "Mínimo 6 caracteres"); hasError = true
-        }
-        if (form.clave != form.confirmarClave) {
-            errores = errores.copy(errorConfirmar = "Las contraseñas no coinciden"); hasError = true
+        // 2. Validar Apellido
+        if (apellidoTrim.length < 2) {
+            _formState.update { it.copy(errorApellido = "El apellido debe tener al menos 2 caracteres") }
+            hasError = true
         }
 
-        if (hasError) {
-            _formState.value = errores
-            return
+        // 3. Validar Correo con Estándar Estricto (Regex)
+        val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
+        if (!emailTrim.matches(emailRegex)) {
+            _formState.update { it.copy(errorEmail = "Formato de correo inválido (ej: usuario@dominio.cl)") }
+            hasError = true
+        } else if (UserRepository.emailExists(emailTrim)) {
+            _formState.update { it.copy(errorEmail = "Este correo ya se encuentra registrado") }
+            hasError = true
         }
+
+        // 4. Validar Contraseña (Mínimo 6 dígitos/caracteres obligatorios)
+        if (claveTrim.length < 6) {
+            _formState.update { it.copy(errorClave = "La contraseña debe tener un mínimo de 6 caracteres") }
+            hasError = true
+        }
+
+        // 5. Validar Confirmación de Contraseña
+        if (claveTrim != confirmarTrim) {
+            _formState.update { it.copy(errorConfirmar = "Las contraseñas no coinciden") }
+            hasError = true
+        }
+
+        if (hasError) return
 
         viewModelScope.launch {
+            _formState.update { it.copy(isLoading = true) }
+            delay(600) // Simulación de guardado
+
             UserRepository.registerUser(
-                nombre = form.nombre.trim(),
-                apellido = form.apellido.trim(),
-                email = form.email.trim().lowercase(),
-                clave = form.clave.trim()
+                nombre = nombreTrim,
+                apellido = apellidoTrim,
+                email = emailTrim,
+                clave = claveTrim
             )
-            _registroExitoso.value = true
+
+            _formState.update { it.copy(isLoading = false, registroExitoso = true) }
         }
     }
 }

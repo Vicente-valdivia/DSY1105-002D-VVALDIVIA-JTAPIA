@@ -7,19 +7,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
 
 @Composable
-fun ProfileScreen() {
-    val user = SecurityRepository.currentUser
+fun ProfileScreen(onLogout: () -> Unit) {
+    val user by UserRepository.currentUser.collectAsState()
+
+    // Generar iniciales dinámicas
+    val initials = user.fullName.split(" ")
+        .mapNotNull { it.firstOrNull()?.toString() }
+        .take(2)
+        .joinToString("")
+        .uppercase()
 
     LazyColumn(
         modifier = Modifier
@@ -52,7 +59,7 @@ fun ProfileScreen() {
                             .background(MinimalPrimaryBlue),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = user.initials, color = MinimalTextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(text = initials.ifEmpty { "G" }, color = MinimalTextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(text = user.fullName, color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
@@ -84,7 +91,7 @@ fun ProfileScreen() {
 
         item {
             Button(
-                onClick = { },
+                onClick = onLogout,
                 colors = ButtonDefaults.buttonColors(containerColor = MinimalAccentRed.copy(alpha = 0.2f)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
