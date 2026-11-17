@@ -11,17 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 object SecurityRepository {
 
-    // --- Perfil del usuario activo ---
-    val currentUser = UserProfile(
-        initials = "VP",
-        fullName = "Víctor P.",
-        roleTitle = "Guardián de Seguridad",
-        email = "guardian@insercode.cl",
-        assignedZone = "Guardián • Zona Sur",
-        shiftTime = "14:00 - 22:00",
-        totalCameras = 12,
-        resolvedAlertsToday = 3
-    )
+    // --- Perfil del usuario activo (dinámico para Google y Login tradicional) ---
+    var currentUser: UserProfile = UserProfile()
 
     // --- Listado en memoria de Cámaras ---
     private val _cameras = MutableStateFlow(

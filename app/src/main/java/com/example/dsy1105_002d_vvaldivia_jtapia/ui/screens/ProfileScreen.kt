@@ -14,12 +14,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
-    val user by UserRepository.currentUser.collectAsState()
+    // Obtenemos el usuario activo del repositorio global centralizado
+    val user = SecurityRepository.currentUser
 
     // Generar iniciales dinámicas
     val initials = user.fullName.split(" ")
@@ -62,8 +64,8 @@ fun ProfileScreen(onLogout: () -> Unit) {
                         Text(text = initials.ifEmpty { "G" }, color = MinimalTextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(text = user.fullName, color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(text = user.email, color = MinimalTextSecondary, fontSize = 12.sp)
+                        Text(text = user.fullName.ifBlank { "Guardián OS" }, color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = user.email.ifBlank { "correo@insercode.cl" }, color = MinimalTextSecondary, fontSize = 12.sp)
                         Surface(color = MinimalAccentGreen.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
                             Text(text = "Correo Verificado", color = MinimalAccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
@@ -82,7 +84,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(text = "Información del Turno", color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "Horario: ${user.shiftTime}", color = MinimalTextSecondary, fontSize = 12.sp)
+                        Text(text = "Horario: ${user.shiftTime.ifBlank { "08:00 - 16:00" }}", color = MinimalTextSecondary, fontSize = 12.sp)
                         Text(text = "Cámaras: ${user.totalCameras}", color = MinimalTextSecondary, fontSize = 12.sp)
                     }
                 }
@@ -91,7 +93,11 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         item {
             Button(
-                onClick = onLogout,
+                onClick = {
+                    // Limpiamos el perfil activo al cerrar sesión
+                    SecurityRepository.currentUser = UserProfile()
+                    onLogout()
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = MinimalAccentRed.copy(alpha = 0.2f)),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()

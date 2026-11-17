@@ -38,6 +38,11 @@ fun HomeScreen() {
     ) {
         // --- Cabecera de Usuario ---
         item {
+            // Validación segura para evitar textos en blanco si el usuario se registró directo
+            val displayName = if (user.fullName.isNotBlank()) user.fullName.substringBefore(" ") else "Guardián"
+            val displayInitials = if (user.initials.isNotBlank()) user.initials else "VG"
+            val displayZone = if (user.assignedZone.isNotBlank()) user.assignedZone else "Guardián • Zona Sur"
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -51,11 +56,11 @@ fun HomeScreen() {
                             .background(MinimalPrimaryBlue),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = user.initials, color = MinimalTextPrimary, fontWeight = FontWeight.Bold)
+                        Text(text = displayInitials, color = MinimalTextPrimary, fontWeight = FontWeight.Bold)
                     }
                     Column {
-                        Text(text = "Hola, ${user.fullName}", color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                        Text(text = user.assignedZone, color = MinimalTextSecondary, fontSize = 12.sp)
+                        Text(text = "Hola, $displayName", color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(text = displayZone, color = MinimalTextSecondary, fontSize = 12.sp)
                     }
                 }
                 Surface(

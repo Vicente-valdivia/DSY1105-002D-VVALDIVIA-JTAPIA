@@ -2,6 +2,8 @@ package com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,11 +88,30 @@ class RegisterViewModel : ViewModel() {
             _formState.update { it.copy(isLoading = true) }
             delay(600) // Simulación de guardado
 
+            // Registramos en el repositorio de usuarios locales
             UserRepository.registerUser(
                 nombre = nombreTrim,
                 apellido = apellidoTrim,
                 email = emailTrim,
                 clave = claveTrim
+            )
+
+            // --- NUEVO: Creamos y asignamos el perfil activo para la UI ---
+            val fullName = "$nombreTrim $apellidoTrim"
+            val initials = listOfNotNull(
+                nombreTrim.firstOrNull(),
+                apellidoTrim.firstOrNull()
+            ).joinToString("").uppercase()
+
+            SecurityRepository.currentUser = UserProfile(
+                initials = initials.ifEmpty { "VG" },
+                fullName = fullName,
+                roleTitle = "Guardián de Seguridad",
+                email = emailTrim,
+                assignedZone = "Guardián • Zona Sur",
+                shiftTime = "08:00 - 16:00",
+                totalCameras = 12,
+                resolvedAlertsToday = 0
             )
 
             _formState.update { it.copy(isLoading = false, registroExitoso = true) }

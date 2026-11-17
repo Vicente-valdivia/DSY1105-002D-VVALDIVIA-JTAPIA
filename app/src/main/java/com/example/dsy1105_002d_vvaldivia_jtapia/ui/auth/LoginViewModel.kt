@@ -3,6 +3,7 @@ package com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
+import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
@@ -41,7 +42,7 @@ class LoginViewModel : ViewModel() {
         _formState.update { it.copy(clave = clave, errorClave = null, mensajeGeneral = null) }
     }
 
-    // 1. Tu lógica existente de inicio de sesión con correo y contraseña
+    // 1. Lógica de inicio de sesión con correo y contraseña
     fun login() {
         val currentState = _formState.value
         var hasError = false
@@ -49,7 +50,6 @@ class LoginViewModel : ViewModel() {
         val emailTrim = currentState.email.trim()
         val claveTrim = currentState.clave.trim()
 
-        // Validación básica de formato de correo en cliente
         val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
 
         if (emailTrim.isBlank() || !emailTrim.matches(emailRegex)) {
@@ -68,18 +68,37 @@ class LoginViewModel : ViewModel() {
             _uiState.value = LoginUiState.Loading
             delay(600) // Simulación de latencia de red
 
-            // Autenticación en el repositorio
             val user = UserRepository.authenticate(emailTrim, claveTrim)
 
             if (user != null) {
-                // Éxito: Limpiamos formulario y pasamos al estado Success
+                // Extraemos el nombre completo de forma segura desde el usuario autenticado
+                val fullName = user.fullName.ifBlank { "Guardián OS" }
+
+                val initials = fullName.split(" ")
+                    .mapNotNull { it.firstOrNull()?.toString() }
+                    .take(2)
+                    .joinToString("")
+                    .uppercase()
+                    .ifEmpty { "VG" }
+
+                // Asignamos el perfil al repositorio activo para que la UI lo refleje al instante
+                SecurityRepository.currentUser = UserProfile(
+                    initials = initials,
+                    fullName = fullName,
+                    roleTitle = "Guardián de Seguridad",
+                    email = user.email,
+                    assignedZone = "Guardián • Zona Sur",
+                    shiftTime = "08:00 - 16:00",
+                    totalCameras = 12,
+                    resolvedAlertsToday = 0
+                )
+
                 _formState.update { LoginFormState() }
                 _uiState.value = LoginUiState.Success(user)
             } else {
-                // FALLO DE SEGURIDAD: Se borra la contraseña y se muestra mensaje genérico
                 _formState.update {
                     it.copy(
-                        clave = "", // <-- Borra la contraseña obligatoriamente
+                        clave = "",
                         mensajeGeneral = "Credenciales inválidas. Verifique su correo y clave."
                     )
                 }
@@ -88,7 +107,7 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    // 2. Función para procesar la autenticación de Google con Firebase y mapear a UserProfile
+    // 2. Función para procesar la autenticación de Google y mapear los datos reales del usuario
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
@@ -101,7 +120,7 @@ class LoginViewModel : ViewModel() {
                     val fullName = firebaseUser.displayName ?: "Usuario Google"
                     val email = firebaseUser.email ?: ""
 
-                    // Calculamos las iniciales de forma automática a partir del nombre
+                    // Calculamos las iniciales de forma automática a partir del nombre real de Google
                     val initials = fullName.split(" ")
                         .mapNotNull { it.firstOrNull()?.toString() }
                         .take(2)
@@ -109,17 +128,20 @@ class LoginViewModel : ViewModel() {
                         .uppercase()
                         .ifEmpty { "UG" }
 
-                    // Creamos el UserProfile con los datos de Firebase y valores por defecto para la app
+                    // Creamos el perfil dinámico con los datos reales obtenidos de Google
                     val userProfile = UserProfile(
                         initials = initials,
                         fullName = fullName,
-                        roleTitle = "Operador de Guardia",
+                        roleTitle = "Guardián de Seguridad",
                         email = email,
-                        assignedZone = "Sector Asignado - General",
+                        assignedZone = "Guardián • Zona Sur",
                         shiftTime = "08:00 - 16:00",
-                        totalCameras = 8,
+                        totalCameras = 12,
                         resolvedAlertsToday = 0
                     )
+
+                    // Asignamos el perfil al repositorio global
+                    SecurityRepository.currentUser = userProfile
 
                     _formState.update { LoginFormState() }
                     _uiState.value = LoginUiState.Success(userProfile)
