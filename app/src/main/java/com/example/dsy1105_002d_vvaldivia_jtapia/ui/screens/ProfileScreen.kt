@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
@@ -94,7 +95,8 @@ fun ProfileScreen(onLogout: () -> Unit) {
         item {
             Button(
                 onClick = {
-                    // Limpiamos el perfil activo al cerrar sesión
+                    // Cerramos sesión en Firebase Auth y limpiamos el perfil activo en memoria
+                    FirebaseAuth.getInstance().signOut()
                     SecurityRepository.currentUser = UserProfile()
                     onLogout()
                 },

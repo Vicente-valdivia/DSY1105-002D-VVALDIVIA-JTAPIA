@@ -4,13 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
-import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.UserRepository
-import kotlinx.coroutines.delay
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 data class RegisterFormState(
     val nombre: String = "",
@@ -32,6 +33,8 @@ class RegisterViewModel : ViewModel() {
     private val _formState = MutableStateFlow(RegisterFormState())
     val formState: StateFlow<RegisterFormState> = _formState.asStateFlow()
 
+    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+
     fun onNombreChanged(v: String) { _formState.update { it.copy(nombre = v, errorNombre = null) } }
     fun onApellidoChanged(v: String) { _formState.update { it.copy(apellido = v, errorApellido = null) } }
     fun onEmailChanged(v: String) { _formState.update { it.copy(email = v, errorEmail = null) } }
@@ -48,35 +51,27 @@ class RegisterViewModel : ViewModel() {
         val claveTrim = state.clave.trim()
         val confirmarTrim = state.confirmarClave.trim()
 
-        // 1. Validar Nombre
         if (nombreTrim.length < 2) {
             _formState.update { it.copy(errorNombre = "El nombre debe tener al menos 2 caracteres") }
             hasError = true
         }
 
-        // 2. Validar Apellido
         if (apellidoTrim.length < 2) {
             _formState.update { it.copy(errorApellido = "El apellido debe tener al menos 2 caracteres") }
             hasError = true
         }
 
-        // 3. Validar Correo con Estándar Estricto (Regex)
         val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$".toRegex()
         if (!emailTrim.matches(emailRegex)) {
             _formState.update { it.copy(errorEmail = "Formato de correo inválido (ej: usuario@dominio.cl)") }
             hasError = true
-        } else if (UserRepository.emailExists(emailTrim)) {
-            _formState.update { it.copy(errorEmail = "Este correo ya se encuentra registrado") }
-            hasError = true
         }
 
-        // 4. Validar Contraseña (Mínimo 6 dígitos/caracteres obligatorios)
         if (claveTrim.length < 6) {
             _formState.update { it.copy(errorClave = "La contraseña debe tener un mínimo de 6 caracteres") }
             hasError = true
         }
 
-        // 5. Validar Confirmación de Contraseña
         if (claveTrim != confirmarTrim) {
             _formState.update { it.copy(errorConfirmar = "Las contraseñas no coinciden") }
             hasError = true
@@ -86,35 +81,41 @@ class RegisterViewModel : ViewModel() {
 
         viewModelScope.launch {
             _formState.update { it.copy(isLoading = true) }
-            delay(600) // Simulación de guardado
+            try {
+                val authResult = firebaseAuth.createUserWithEmailAndPassword(emailTrim, claveTrim).await()
+                val fullName = "$nombreTrim $apellidoTrim"
 
-            // Registramos en el repositorio de usuarios locales
-            UserRepository.registerUser(
-                nombre = nombreTrim,
-                apellido = apellidoTrim,
-                email = emailTrim,
-                clave = claveTrim
-            )
+                // Guardamos el nombre completo en el perfil de Firebase Auth
+                val profileUpdates = UserProfileChangeRequest.Builder()
+                    .setDisplayName(fullName)
+                    .build()
+                authResult.user?.updateProfile(profileUpdates)?.await()
 
-            // --- NUEVO: Creamos y asignamos el perfil activo para la UI ---
-            val fullName = "$nombreTrim $apellidoTrim"
-            val initials = listOfNotNull(
-                nombreTrim.firstOrNull(),
-                apellidoTrim.firstOrNull()
-            ).joinToString("").uppercase()
+                val initials = listOfNotNull(
+                    nombreTrim.firstOrNull(),
+                    apellidoTrim.firstOrNull()
+                ).joinToString("").uppercase().ifEmpty { "VG" }
 
-            SecurityRepository.currentUser = UserProfile(
-                initials = initials.ifEmpty { "VG" },
-                fullName = fullName,
-                roleTitle = "Guardián de Seguridad",
-                email = emailTrim,
-                assignedZone = "Guardián • Zona Sur",
-                shiftTime = "08:00 - 16:00",
-                totalCameras = 12,
-                resolvedAlertsToday = 0
-            )
+                SecurityRepository.currentUser = UserProfile(
+                    initials = initials,
+                    fullName = fullName,
+                    roleTitle = "Guardián de Seguridad",
+                    email = emailTrim,
+                    assignedZone = "Guardián • Zona Sur",
+                    shiftTime = "08:00 - 16:00",
+                    totalCameras = 12,
+                    resolvedAlertsToday = 0
+                )
 
-            _formState.update { it.copy(isLoading = false, registroExitoso = true) }
+                _formState.update { it.copy(isLoading = false, registroExitoso = true) }
+            } catch (e: Exception) {
+                _formState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorEmail = e.localizedMessage ?: "No se pudo completar el registro en Firebase"
+                    )
+                }
+            }
         }
     }
 }
