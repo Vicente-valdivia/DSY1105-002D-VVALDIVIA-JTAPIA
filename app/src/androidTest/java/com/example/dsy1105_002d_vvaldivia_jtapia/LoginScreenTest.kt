@@ -23,7 +23,7 @@ class LoginScreenTest {
         }
 
         composeRule.onNodeWithText("Modo Guardián").assertIsDisplayed()
-        composeRule.onNodeWithText("Monitoreo móvil de eventos").assertIsDisplayed()
+        composeRule.onNodeWithText("Acceso a Central de Monitoreo").assertIsDisplayed()
         composeRule.onNodeWithText("Iniciar Sesión").assertIsDisplayed()
     }
 }

@@ -1,6 +1,8 @@
 package com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,25 +16,43 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth.RegisterViewModel
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.components.GoogleSignInButton
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
 
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onBackToLogin: () -> Unit,
+    onGoogleSuccess: () -> Unit = {},
     viewModel: RegisterViewModel = viewModel()
 ) {
     val formState by viewModel.formState.collectAsState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     LaunchedEffect(formState.registroExitoso) {
         if (formState.registroExitoso) {
+            Toast.makeText(context, "Cuenta creada. Ahora inicia sesión.", Toast.LENGTH_LONG).show()
             onRegisterSuccess()
+        }
+    }
+
+    LaunchedEffect(formState.mensajeGeneral) {
+        formState.mensajeGeneral?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    LaunchedEffect(formState.googleExitoso) {
+        if (formState.googleExitoso) {
+            onGoogleSuccess()
         }
     }
 
@@ -110,6 +130,8 @@ fun RegisterScreen(
                     label = { Text("Correo Electrónico (Estándar)", color = MinimalTextSecondary) },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MinimalPrimaryBlue) },
                     isError = formState.errorEmail != null,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MinimalPrimaryBlue,
                         unfocusedBorderColor = MinimalSurfaceBorder,
@@ -128,6 +150,8 @@ fun RegisterScreen(
                     label = { Text("Contraseña (Mín. 6 caracteres)", color = MinimalTextSecondary) },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MinimalPrimaryBlue) },
                     visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isError = formState.errorClave != null,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MinimalPrimaryBlue,
@@ -147,6 +171,8 @@ fun RegisterScreen(
                     label = { Text("Confirmar Contraseña", color = MinimalTextSecondary) },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = MinimalPrimaryBlue) },
                     visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isError = formState.errorConfirmar != null,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MinimalPrimaryBlue,
@@ -158,6 +184,22 @@ fun RegisterScreen(
                 )
                 if (formState.errorConfirmar != null) {
                     Text(text = formState.errorConfirmar!!, color = MinimalAccentRed, fontSize = 11.sp)
+                }
+
+                if (formState.mensajeGeneral != null) {
+                    Surface(
+                        color = MinimalAccentRed.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = formState.mensajeGeneral!!,
+                            color = MinimalAccentRed,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -177,6 +219,28 @@ fun RegisterScreen(
                         Text("Registrar Credencial", color = MinimalTextPrimary, fontWeight = FontWeight.Bold)
                     }
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MinimalSurfaceBorder)
+                    Text(
+                        text = " O ",
+                        color = MinimalTextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MinimalSurfaceBorder)
+                }
+
+                // Registro con Google: abre el selector de cuentas de Google
+                GoogleSignInButton(
+                    enabled = !formState.isLoading,
+                    label = "Registrarse con Google",
+                    onIdToken = { viewModel.signInWithGoogle(it) },
+                    onError = { viewModel.onGoogleError(it) }
+                )
             }
         }
 

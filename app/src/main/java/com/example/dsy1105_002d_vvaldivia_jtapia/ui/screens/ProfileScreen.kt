@@ -17,12 +17,21 @@ import androidx.compose.ui.unit.sp
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @Composable
 fun ProfileScreen(onLogout: () -> Unit) {
     // Obtenemos el usuario activo del repositorio global centralizado
-    val user = SecurityRepository.currentUser
+    val user by SecurityRepository.currentUserFlow.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // El badge solo se muestra si Firebase confirma realmente la verificación del correo
+    val emailVerified = FirebaseAuth.getInstance().currentUser?.isEmailVerified == true
 
     // Generar iniciales dinámicas
     val initials = user.fullName.split(" ")
@@ -67,8 +76,15 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(text = user.fullName.ifBlank { "Guardián OS" }, color = MinimalTextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         Text(text = user.email.ifBlank { "correo@insercode.cl" }, color = MinimalTextSecondary, fontSize = 12.sp)
-                        Surface(color = MinimalAccentGreen.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                            Text(text = "Correo Verificado", color = MinimalAccentGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                        val badgeColor = if (emailVerified) MinimalAccentGreen else MinimalAccentAmber
+                        Surface(color = badgeColor.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                            Text(
+                                text = if (emailVerified) "Correo Verificado" else "Correo sin verificar",
+                                color = badgeColor,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
                 }
@@ -98,7 +114,18 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     // Cerramos sesión en Firebase Auth y limpiamos el perfil activo en memoria
                     FirebaseAuth.getInstance().signOut()
                     SecurityRepository.currentUser = UserProfile()
-                    onLogout()
+                    // Limpia el estado de credenciales de Google para que el próximo inicio pida cuenta
+                    // (onLogout va dentro de la corrutina: al navegar, este scope se cancelaría antes)
+                    scope.launch {
+                        try {
+                            CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest())
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // No es crítico: la sesión de Firebase ya está cerrada
+                        }
+                        onLogout()
+                    }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = MinimalAccentRed.copy(alpha = 0.2f)),
                 shape = RoundedCornerShape(12.dp),

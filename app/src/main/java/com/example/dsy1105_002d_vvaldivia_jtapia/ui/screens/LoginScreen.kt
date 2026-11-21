@@ -1,9 +1,9 @@
 package com.example.dsy1105_002d_vvaldivia_jtapia.ui.screens
 
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke // <-- Importación necesaria para el borde del botón
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
@@ -12,21 +12,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth.LoginUiState
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth.LoginViewModel
+import com.example.dsy1105_002d_vvaldivia_jtapia.ui.components.GoogleSignInButton
 import com.example.dsy1105_002d_vvaldivia_jtapia.ui.theme.*
-import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -36,8 +32,13 @@ fun LoginScreen(
 ) {
     val formState by viewModel.formState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(formState.mensajeGeneral) {
+        formState.mensajeGeneral?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
 
     LaunchedEffect(uiState) {
         if (uiState is LoginUiState.Success) {
@@ -49,6 +50,7 @@ fun LoginScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MinimalBackground)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -87,6 +89,8 @@ fun LoginScreen(
                         )
                     },
                     isError = formState.errorEmail != null,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MinimalPrimaryBlue,
                         unfocusedBorderColor = MinimalSurfaceBorder,
@@ -111,6 +115,8 @@ fun LoginScreen(
                         )
                     },
                     visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isError = formState.errorClave != null,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MinimalPrimaryBlue,
@@ -179,62 +185,12 @@ fun LoginScreen(
                     HorizontalDivider(modifier = Modifier.weight(1f), color = MinimalSurfaceBorder)
                 }
 
-                // Botón de Inicio de Sesión con Google (Credential Manager)
-                OutlinedButton(
-                    onClick = {
-                        coroutineScope.launch {
-                            try {
-                                val credentialManager = CredentialManager.create(context)
-
-                                val googleIdOption = GetGoogleIdOption.Builder()
-                                    .setServerClientId("794800826190-0vbv1au4u18beuc5b5q4j50pc592fs9f.apps.googleusercontent.com")
-                                    .setFilterByAuthorizedAccounts(false)
-                                    .build()
-
-                                val request = GetCredentialRequest.Builder()
-                                    .addCredentialOption(googleIdOption)
-                                    .build()
-
-                                val result = credentialManager.getCredential(context, request)
-                                val credential = result.credential
-
-                                if (credential is androidx.credentials.CustomCredential &&
-                                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-                                ) {
-                                    val googleIdTokenCredential =
-                                        GoogleIdTokenCredential.createFrom(credential.data)
-                                    val googleIdToken = googleIdTokenCredential.idToken
-
-                                    viewModel.signInWithGoogle(googleIdToken)
-                                }
-                            } catch (e: GetCredentialException) {
-                                // Usuario canceló el selector
-                            } catch (e: Exception) {
-                                Toast.makeText(
-                                    context,
-                                    "Error Google Sign-In: ${e.localizedMessage}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    },
+                // Botón de Google: abre el selector de cuentas de Google
+                GoogleSignInButton(
                     enabled = uiState !is LoginUiState.Loading,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MinimalTextPrimary),
-                    border = BorderStroke(
-                        1.dp,
-                        MinimalSurfaceBorder
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                ) {
-                    Text(
-                        "Continuar con Google",
-                        fontWeight = FontWeight.Medium,
-                        color = MinimalTextPrimary
-                    )
-                }
+                    onIdToken = { viewModel.signInWithGoogle(it) },
+                    onError = { viewModel.onGoogleError(it) }
+                )
 
                 TextButton(
                     onClick = onNavigateToRegister,

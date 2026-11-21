@@ -34,6 +34,17 @@ fun MainScreen(onLogout: () -> Unit) {
         Screen.Profile
     )
 
+    // Navegación entre pestañas, compartida por la barra inferior y los atajos del Inicio
+    val navigateToTab: (String) -> Unit = { route ->
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
     Scaffold(
         containerColor = MinimalBackground,
         bottomBar = {
@@ -52,13 +63,7 @@ fun MainScreen(onLogout: () -> Unit) {
                         selected = selected,
                         onClick = {
                             if (currentRoute != screen.route) {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+                                navigateToTab(screen.route)
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -78,7 +83,14 @@ fun MainScreen(onLogout: () -> Unit) {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    onOpenCameras = { navigateToTab(Screen.Cameras.route) },
+                    onOpenEvents = { navigateToTab(Screen.Events.route) },
+                    onOpenAlerts = { navigateToTab(Screen.Alerts.route) },
+                    onOpenProfile = { navigateToTab(Screen.Profile.route) }
+                )
+            }
             composable(Screen.Cameras.route) { CamerasScreen() }
             composable(Screen.Events.route) { EventsScreen() }
             composable(Screen.Alerts.route) { AlertsScreen() }

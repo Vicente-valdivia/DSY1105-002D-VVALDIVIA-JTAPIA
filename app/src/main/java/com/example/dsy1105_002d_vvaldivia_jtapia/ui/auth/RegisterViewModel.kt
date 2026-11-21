@@ -2,10 +2,14 @@ package com.example.dsy1105_002d_vvaldivia_jtapia.ui.auth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.dsy1105_002d_vvaldivia_jtapia.data.model.UserProfile
 import com.example.dsy1105_002d_vvaldivia_jtapia.data.repository.SecurityRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 import com.google.firebase.auth.UserProfileChangeRequest
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +29,8 @@ data class RegisterFormState(
     val errorClave: String? = null,
     val errorConfirmar: String? = null,
     val registroExitoso: Boolean = false,
+    val googleExitoso: Boolean = false,
+    val mensajeGeneral: String? = null,
     val isLoading: Boolean = false
 )
 
@@ -33,7 +39,8 @@ class RegisterViewModel : ViewModel() {
     private val _formState = MutableStateFlow(RegisterFormState())
     val formState: StateFlow<RegisterFormState> = _formState.asStateFlow()
 
-    private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
+    // lazy: no toca Firebase hasta que realmente se necesita
+    private val firebaseAuth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     fun onNombreChanged(v: String) { _formState.update { it.copy(nombre = v, errorNombre = null) } }
     fun onApellidoChanged(v: String) { _formState.update { it.copy(apellido = v, errorApellido = null) } }
@@ -42,6 +49,8 @@ class RegisterViewModel : ViewModel() {
     fun onConfirmarClaveChanged(v: String) { _formState.update { it.copy(confirmarClave = v, errorConfirmar = null) } }
 
     fun registrar() {
+        if (_formState.value.isLoading) return // evita doble envío / cuentas duplicadas
+
         val state = _formState.value
         var hasError = false
 
@@ -80,42 +89,70 @@ class RegisterViewModel : ViewModel() {
         if (hasError) return
 
         viewModelScope.launch {
-            _formState.update { it.copy(isLoading = true) }
+            _formState.update { it.copy(isLoading = true, mensajeGeneral = null) }
             try {
-                val authResult = firebaseAuth.createUserWithEmailAndPassword(emailTrim, claveTrim).await()
+                val authResult = withTimeout(AUTH_TIMEOUT_MS) {
+                    firebaseAuth.createUserWithEmailAndPassword(emailTrim, claveTrim).await()
+                }
                 val fullName = "$nombreTrim $apellidoTrim"
 
-                // Guardamos el nombre completo en el perfil de Firebase Auth
-                val profileUpdates = UserProfileChangeRequest.Builder()
-                    .setDisplayName(fullName)
-                    .build()
-                authResult.user?.updateProfile(profileUpdates)?.await()
+                // Guardamos el nombre completo en el perfil de Firebase Auth. Si falla, la cuenta
+                // ya existe: no debemos mostrar "no se pudo registrar".
+                try {
+                    val profileUpdates = UserProfileChangeRequest.Builder()
+                        .setDisplayName(fullName)
+                        .build()
+                    authResult.user?.updateProfile(profileUpdates)?.await()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // El nombre se podrá completar más tarde; el registro fue exitoso.
+                }
 
-                val initials = listOfNotNull(
-                    nombreTrim.firstOrNull(),
-                    apellidoTrim.firstOrNull()
-                ).joinToString("").uppercase().ifEmpty { "VG" }
-
-                SecurityRepository.currentUser = UserProfile(
-                    initials = initials,
-                    fullName = fullName,
-                    roleTitle = "Guardián de Seguridad",
-                    email = emailTrim,
-                    assignedZone = "Guardián • Zona Sur",
-                    shiftTime = "08:00 - 16:00",
-                    totalCameras = 12,
-                    resolvedAlertsToday = 0
-                )
+                // Firebase deja la sesión abierta tras crear la cuenta. La app exige iniciar sesión
+                // manualmente después de registrarse, así que cerramos esa sesión implícita.
+                firebaseAuth.signOut()
 
                 _formState.update { it.copy(isLoading = false, registroExitoso = true) }
+            } catch (e: TimeoutCancellationException) {
+                _formState.update { it.copy(isLoading = false, mensajeGeneral = e.toAuthMessage()) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: FirebaseAuthUserCollisionException) {
+                _formState.update { it.copy(isLoading = false, errorEmail = "Este correo ya está registrado") }
+            } catch (e: FirebaseAuthWeakPasswordException) {
+                _formState.update { it.copy(isLoading = false, errorClave = "La contraseña es demasiado débil") }
             } catch (e: Exception) {
-                _formState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorEmail = e.localizedMessage ?: "No se pudo completar el registro en Firebase"
-                    )
-                }
+                _formState.update { it.copy(isLoading = false, mensajeGeneral = e.toAuthMessage()) }
             }
         }
+    }
+
+    // Registro / acceso con Google: si la cuenta no existe, Firebase la crea.
+    fun signInWithGoogle(idToken: String) {
+        if (_formState.value.isLoading) return
+
+        viewModelScope.launch {
+            _formState.update { it.copy(isLoading = true, mensajeGeneral = null) }
+            try {
+                val profile = withTimeout(AUTH_TIMEOUT_MS) { firebaseAuth.signInWithGoogleIdToken(idToken) }
+                if (profile != null) {
+                    SecurityRepository.currentUser = profile
+                    _formState.update { it.copy(isLoading = false, googleExitoso = true) }
+                } else {
+                    _formState.update { it.copy(isLoading = false, mensajeGeneral = "No se pudo obtener el usuario de Firebase.") }
+                }
+            } catch (e: TimeoutCancellationException) {
+                _formState.update { it.copy(isLoading = false, mensajeGeneral = e.toAuthMessage()) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _formState.update { it.copy(isLoading = false, mensajeGeneral = e.toAuthMessage()) }
+            }
+        }
+    }
+
+    fun onGoogleError(message: String) {
+        _formState.update { it.copy(mensajeGeneral = message) }
     }
 }

@@ -15,4 +15,4 @@ val MinimalTextSecondary = Color(0xFF94A3B8)
 
 val MinimalAccentRed = Color(0xFFEF4444)
 val MinimalAccentGreen = Color(0xFF10B981)
-val MinimalAccentAmber = Color(0xFBF59E0B)
+val MinimalAccentAmber = Color(0xFFF59E0B)
